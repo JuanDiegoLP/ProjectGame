@@ -21,7 +21,7 @@ public class PlayerController : MonoBehaviour
     private bool rightDirection = true;
 
     //Jump
-    [Header["Jump"]]
+    [Header("Jump")]
     [SerializeField] private float jumpForce;
     [SerializeField] private LayerMask isFloor;
     [SerializeField] private Transform floorController;
@@ -30,15 +30,23 @@ public class PlayerController : MonoBehaviour
 
     private bool jump = false;
 
+    //Animator
+    [Header("Animator")]
+    private Animator animator;
+
     //Start
     private void Start()
     {
         rb2D = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
     }
 
     private void Update()
     {
         movement = Input.GetAxisRaw("Horizontal") * movementSpeed;
+
+        animator.SetFloat("movement", Math.Abs(movement));
+
         if(Input.GetButtonDown("Jump"))
         {
             jump = true;
@@ -48,6 +56,7 @@ public class PlayerController : MonoBehaviour
     private void FixedUpdate()
     {
         onTheFloor = Physics2D.OverlapBox(floorController.position, boxDimensions, 0f, isFloor);
+        animator.SetBool("on the floor", onTheFloor);
         Move(movement * Time.fixedDeltaTime, jump);
 
         jump = false;
