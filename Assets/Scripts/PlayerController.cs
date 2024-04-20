@@ -1,54 +1,90 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    bool canJump;
+    //Movement
+    [Header("Movement")]
+    private Rigidbody2D rb2D;
 
-    // Start is called before the first frame update
-    void Start()
+    private float movement = 0f;
+
+    [SerializeField] private float movementSpeed;
+    [Range(0, 0.3f)] [SerializeField] private float movementSmoothing;
+
+    private Vector3 speed = Vector3.zero;
+    private bool rightDirection = true;
+
+    //Jump
+    [Header["Jump"]]
+    [SerializeField] private float jumpForce;
+    [SerializeField] private LayerMask isFloor;
+    [SerializeField] private Transform floorController;
+    [SerializeField] private Vector3 boxDimensions;
+    [SerializeField] private bool onTheFloor;
+
+    private bool jump = false;
+
+    //Start
+    private void Start()
     {
-        
+        rb2D = GetComponent<Rigidbody2D>();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        if (Input.GetKey("left") || Input.GetKey("a"))
+        movement = Input.GetAxisRaw("Horizontal") * movementSpeed;
+        if(Input.GetButtonDown("Jump"))
         {
-            gameObject.GetComponent<Rigidbody2D>().AddForce(new Vector2(-750f * Time.deltaTime, 0));
-            gameObject.GetComponent<Animator>().SetBool("moving", true);
-            gameObject.GetComponent<SpriteRenderer>().flipX = true;
-        }
-
-        if (Input.GetKey("right") || Input.GetKey("d"))
-        {
-            gameObject.GetComponent<Rigidbody2D>().AddForce(new Vector2(750f * Time.deltaTime, 0));
-            gameObject.GetComponent<Animator>().SetBool("moving", true);
-            gameObject.GetComponent<SpriteRenderer>().flipX = false;
-        }
-
-        if (!Input.GetKey("left") && !Input.GetKey("a") && !Input.GetKey("right") && !Input.GetKey("d"))
-        {
-            gameObject.GetComponent<Animator>().SetBool("moving", false);
-        }
-
-        if (Input.GetKeyDown("up") && canJump || Input.GetKeyDown("w") && canJump)
-        {
-            canJump = false;
-            gameObject.GetComponent<Rigidbody2D>().AddForce(new Vector2(0, 250f));
+            jump = true;
         }
     }
 
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void FixedUpdate()
     {
-        if (collision.transform.tag == "Ground")
+        onTheFloor = Physics2D.OverlapBox(floorController.position, boxDimensions, 0f, isFloor);
+        Move(movement * Time.fixedDeltaTime, jump);
+
+        jump = false;
+    }
+
+    private void Move(float move, bool jump)
+    {
+        Vector3 targetSpeed = new Vector2(move, rb2D.velocity.y);
+        rb2D.velocity = Vector3.SmoothDamp(rb2D.velocity, targetSpeed, ref speed, movementSmoothing);
+
+        if (move>0 && !rightDirection)
         {
-            canJump = true;
+            TurnLeftOrRight();
         }
+        else if (move<0 && rightDirection)
+        {
+            TurnLeftOrRight();
+        }
+
+        if (onTheFloor && jump)
+        {
+            onTheFloor = false;
+            rb2D.AddForce(new Vector2(0f, jumpForce));
+        }
+    }
+
+    private void TurnLeftOrRight()
+    {
+        rightDirection = !rightDirection;
+        Vector3 scale = transform.localScale;
+        scale.x *= -1;
+        transform.localScale = scale;
+    }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireCube(floorController.position, boxDimensions);
     }
 }
