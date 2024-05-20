@@ -44,3 +44,15 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Sky
+    uniqueID: 688379395
+    locked: 0
+  - name: Terrain
+    uniqueID: 2715324159
+    locked: 0
+  - name: Enemy
+    uniqueID: 4109771135
+    locked: 0
+  - name: Player
+    uniqueID: 2953916717
+    locked: 0

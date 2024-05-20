@@ -7,9 +7,15 @@ public class PauseMenu : MonoBehaviour
 {
     public enum MenuState { Active, Inactive }
 
-    private MenuState currentState = MenuState.Inactive;
+    private MenuState currentState;
 
     public GameObject pauseMenuUI;
+
+    private void Start()
+    {
+        currentState = MenuState.Inactive;
+        pauseMenuUI.SetActive(false);
+    }
 
     private void Update()
     {
