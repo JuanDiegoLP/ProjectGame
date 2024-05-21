@@ -34,6 +34,13 @@ public class PlayerController : MonoBehaviour
     [Header("Animator")]
     private Animator animator;
 
+    public LayerMask enemyLayer;
+    [SerializeField]public float attackRange;
+    [SerializeField] private Transform hitController;
+    public int maxHealth = 100;
+
+    public CharacterStats playerStats;
+
     //Start
     private void Start()
     {
@@ -51,6 +58,11 @@ public class PlayerController : MonoBehaviour
         {
             jump = true;
         }
+
+        if (Input.GetButtonDown("Fire1"))
+        {
+            Attack();
+        }
     }
 
     private void FixedUpdate()
@@ -60,6 +72,33 @@ public class PlayerController : MonoBehaviour
         Move(movement * Time.fixedDeltaTime, jump);
 
         jump = false;
+    }
+
+    private void Attack()
+    {
+        animator.SetTrigger("Attack");
+        // Buscar enemigos en el rango de ataque
+        Collider2D[] enemies = Physics2D.OverlapCircleAll(transform.position, attackRange, enemyLayer);
+
+        foreach (Collider2D enemy in enemies)
+        {
+            if (enemy.CompareTag("Enemy"))
+            {
+                enemy.transform.GetComponent<EnemyBehavior>().TakeDamage(20);
+            }
+        }
+    }
+
+    public void TakeDamage(int damage)
+    {
+        playerStats.TakeDamage(damage);
+    }
+
+    private void Die()
+    {
+        animator.SetTrigger("Death");
+        // Lógica para manejar la muerte del personaje
+        Destroy(gameObject);
     }
 
     private void Move(float move, bool jump)
@@ -95,5 +134,8 @@ public class PlayerController : MonoBehaviour
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireCube(floorController.position, boxDimensions);
+
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(hitController.position, attackRange);
     }
 }

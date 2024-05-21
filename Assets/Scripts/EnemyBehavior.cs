@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class EnemyBehavior : MonoBehaviour
 {
-    public CombatController combatController;
+    public  CharacterStats enemyStats;
 
     public float speed = 2f;
     public float detectionRange = 5f;
@@ -110,19 +110,15 @@ public class EnemyBehavior : MonoBehaviour
     IEnumerator AttackPlayer()
     {
         isAttacking = true;
-        animator.SetBool("attack", true);
-        animator.SetBool("walk", false);
-        combatController.Attack(player.gameObject, 1);
+        animator.SetTrigger("Attack");
+        enemyStats.Attack(player.gameObject, 20);
         yield return new WaitForSeconds(1f);
         isAttacking = false;
-        animator.SetBool("attack", false);
     }
 
     public void TakeDamage(int damage)
     {
-        currentHealth -= damage;
-        combatController.TakeDamage(damage);
-
+        enemyStats.TakeDamage(damage);
         if (currentHealth <= 0)
         {
             Die();
@@ -131,12 +127,8 @@ public class EnemyBehavior : MonoBehaviour
 
     void Die()
     {
-        isDead = true;
         animator.SetTrigger("Death");
-        rb.velocity = Vector2.zero;
-        rb.isKinematic = true;
-        GetComponent<Collider2D>().enabled = false;
-        Destroy(gameObject, 2f);
+        Destroy(gameObject);
     }
 
     private void IgnorePlayerCollision()

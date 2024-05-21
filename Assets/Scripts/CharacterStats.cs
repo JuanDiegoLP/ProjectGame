@@ -2,9 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CombatController : MonoBehaviour
+public class CharacterStats : MonoBehaviour
 {
-    public int maxHealth = 3;
+    public int maxHealth = 100;
     private int currentHealth;
 
     public void Start()
@@ -18,17 +18,23 @@ public class CombatController : MonoBehaviour
 
         if (currentHealth <= 0)
         {
-            Destroy(gameObject);
+            Die();
         }
     }
 
     public void Attack(GameObject target, int damage)
     {
-        CombatController targetHealth = target.GetComponent<CombatController>();
+        CharacterStats targetStats = target.GetComponent<CharacterStats>();
 
-        if (targetHealth != null)
+        if (targetStats != null)
         {
-            targetHealth.TakeDamage(damage);
+            targetStats.TakeDamage(damage);
         }
+
+    }
+
+    public void Die()
+    {
+        Destroy(gameObject);
     }
 }
