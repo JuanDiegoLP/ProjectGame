@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class EnemyBehavior : MonoBehaviour
 {
@@ -8,11 +9,12 @@ public class EnemyBehavior : MonoBehaviour
 
     public float speed = 2f;
     public float detectionRange = 5f;
+    public float attackRange = 1f;
+    public int maxHealth = 100;
     public Transform patrolPoint1;
     public Transform patrolPoint2;
     public LayerMask playerLayer;
-    public float attackRange = 1f;
-    public int maxHealth = 100;
+    public Transform player1;
 
     private int currentHealth;
     private Transform currentPatrolPoint;
@@ -20,7 +22,6 @@ public class EnemyBehavior : MonoBehaviour
     private Rigidbody2D rb;
     private bool isAttacking = false;
     private bool isDead = false;
-    private Transform player;
     private Collider2D enemyCollider;
 
     void Start()
@@ -31,40 +32,42 @@ public class EnemyBehavior : MonoBehaviour
         enemyCollider = GetComponent<Collider2D>();
         currentPatrolPoint = patrolPoint1;
         rb.isKinematic = true;
-
-        IgnorePlayerCollision();
     }
 
     void Update()
     {
-        if (isDead)
-            return;
+        if (isDead) return;
 
-        if (player == null)
+        DetectAndChasePlayer();
+
+        if (!isAttacking && player1 == null)
+        {
+            Patrol();
+        }
+    }
+
+    void DetectAndChasePlayer()
+    {
+        if (player1 == null)
         {
             DetectPlayer();
         }
         else
         {
-            float distanceToPlayer = Vector2.Distance(transform.position, player.position);
+            float distanceToPlayer = Vector2.Distance(transform.position, player1.position);
             if (distanceToPlayer > detectionRange)
             {
-                player = null;
+                player1 = null;
                 animator.SetBool("walk", false);
             }
-            else if (distanceToPlayer <= attackRange)
+            else if (distanceToPlayer <= attackRange && !isAttacking)
             {
-                StartCoroutine(AttackPlayer());
+                AttackPlayer();
             }
             else
             {
                 ChasePlayer();
             }
-        }
-
-        if (!isAttacking && player == null)
-        {
-            Patrol();
         }
     }
 
@@ -73,7 +76,7 @@ public class EnemyBehavior : MonoBehaviour
         Collider2D[] hitPlayers = Physics2D.OverlapCircleAll(transform.position, detectionRange, playerLayer);
         if (hitPlayers.Length > 0)
         {
-            player = hitPlayers[0].transform;
+            player1 = hitPlayers[0].transform;
             Debug.Log("Player detected!");
             animator.SetBool("walk", true);
             IgnorePlayerCollision();
@@ -95,9 +98,9 @@ public class EnemyBehavior : MonoBehaviour
     void ChasePlayer()
     {
         animator.SetBool("walk", true);
-        rb.MovePosition(Vector2.MoveTowards(transform.position, player.position, speed * Time.deltaTime));
+        rb.MovePosition(Vector2.MoveTowards(transform.position, player1.position, speed * Time.deltaTime));
 
-        if (transform.position.x < player.position.x)
+        if (transform.position.x < player1.position.x)
         {
             transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x), transform.localScale.y);
         }
@@ -107,18 +110,29 @@ public class EnemyBehavior : MonoBehaviour
         }
     }
 
-    IEnumerator AttackPlayer()
+    void AttackPlayer()
     {
-        isAttacking = true;
-        animator.SetTrigger("Attack");
-        enemyStats.Attack(player.gameObject, 20);
-        yield return new WaitForSeconds(1f);
+        if (player1 != null && player1.CompareTag("Player"))
+        {
+            PlayerController player = player1.GetComponent<PlayerController>();
+            if (player != null)
+            {
+                isAttacking = true;
+                animator.SetTrigger("Attack");
+                player.TakeDamage(20);
+                Invoke("ResetAttack", 1f); // Cooldown for attack
+            }
+        }
+    }
+
+    void ResetAttack()
+    {
         isAttacking = false;
     }
 
     public void TakeDamage(int damage)
     {
-        enemyStats.TakeDamage(damage);
+        currentHealth -= damage;
         if (currentHealth <= 0)
         {
             Die();
@@ -128,14 +142,15 @@ public class EnemyBehavior : MonoBehaviour
     void Die()
     {
         animator.SetTrigger("Death");
-        Destroy(gameObject);
+        isDead = true;
+        Destroy(gameObject, 4f);
     }
 
     private void IgnorePlayerCollision()
     {
-        if (player != null)
+        if (player1 != null)
         {
-            Collider2D playerCollider = player.GetComponent<Collider2D>();
+            Collider2D playerCollider = player1.GetComponent<Collider2D>();
             if (playerCollider != null)
             {
                 Physics2D.IgnoreCollision(enemyCollider, playerCollider);

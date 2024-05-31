@@ -1,4 +1,4 @@
-using System;
+ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,6 +8,9 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
+    public delegate void OnHealthChanged(float currentHealth, float maxHealth);
+    public event OnHealthChanged HealthChanged;
+
     //Movement
     [Header("Movement")]
     private Rigidbody2D rb2D;
@@ -39,13 +42,21 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Transform hitController;
     public int maxHealth = 100;
 
-    public CharacterStats playerStats;
+    private int currentHealth;
+
+    public GameOverManager gameOverManager;
+    public float gameOverDelay = 0.25f;
+    public AudioClip deathSound;
+    private AudioSource audioSource;
 
     //Start
     private void Start()
     {
+        currentHealth = maxHealth;
         rb2D = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+        HealthChanged?.Invoke(currentHealth, maxHealth);
+        audioSource = GetComponent<AudioSource>();
     }
 
     private void Update()
@@ -77,7 +88,6 @@ public class PlayerController : MonoBehaviour
     private void Attack()
     {
         animator.SetTrigger("Attack");
-        // Buscar enemigos en el rango de ataque
         Collider2D[] enemies = Physics2D.OverlapCircleAll(transform.position, attackRange, enemyLayer);
 
         foreach (Collider2D enemy in enemies)
@@ -91,13 +101,36 @@ public class PlayerController : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        playerStats.TakeDamage(damage);
+        currentHealth -= damage;
+        if (currentHealth < 0) currentHealth = 0;
+        HealthChanged?.Invoke(currentHealth, maxHealth);
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
     }
 
     private void Die()
     {
+        StartCoroutine(HandleDeath());
+    }
+
+    private IEnumerator HandleDeath()
+    {
+        if (audioSource != null && deathSound != null)
+        {
+            audioSource.PlayOneShot(deathSound);
+        }
+
         animator.SetTrigger("Death");
-        // Lógica para manejar la muerte del personaje
+
+        yield return new WaitForSeconds(gameOverDelay);
+
+        if (gameOverManager != null)
+        {
+            gameOverManager.ShowGameOver();
+        }
+
         Destroy(gameObject);
     }
 

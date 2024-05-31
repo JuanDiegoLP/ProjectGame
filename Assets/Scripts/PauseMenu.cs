@@ -39,20 +39,19 @@ public class PauseMenu : MonoBehaviour
     public void PauseGame()
     {
         pauseMenuUI.SetActive(true);
-        Time.timeScale = 0f; // Pausar el juego
+        Time.timeScale = 0f;
         currentState = MenuState.Active;
     }
 
     public void ResumeGame()
     {
         pauseMenuUI.SetActive(false);
-        Time.timeScale = 1f; // Reanudar el juego
+        Time.timeScale = 1f;
         currentState = MenuState.Inactive;
     }
 
     public void GoToMainMenu()
     {
-        // Cargar la escena del menú principal
         SceneManager.LoadScene("MainMenu");
     }
 }
