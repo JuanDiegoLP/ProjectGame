@@ -5,33 +5,48 @@ using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class EnemyBehavior : MonoBehaviour
 {
-    public  CharacterStats enemyStats;
-
+    [Header("Movement Settings")]
     public float speed = 2f;
-    public float detectionRange = 5f;
-    public float attackRange = 1f;
-    public int maxHealth = 100;
     public Transform patrolPoint1;
     public Transform patrolPoint2;
-    public LayerMask playerLayer;
-    public Transform player1;
 
-    private int currentHealth;
-    private Transform currentPatrolPoint;
+    [Header("Detection Settings")]
+    public float detectionRange = 5f;
+    public LayerMask playerLayer;
+
+    [Header("Attack Settings")]
+    public float attackRange = 1f;
+
+    [Header("References")]
+    public Transform player1;
     private Animator animator;
     private Rigidbody2D rb;
-    private bool isAttacking = false;
-    private bool isDead = false;
     private Collider2D enemyCollider;
 
+    private int maxHealth = 100;
+    private int currentHealth;
+    private Transform currentPatrolPoint;
+    private bool isAttacking = false;
+    private bool isDead = false;
+
     void Start()
+    {
+        InitializeComponents();
+        InitializePatrol();
+    }
+
+    void InitializeComponents()
     {
         currentHealth = maxHealth;
         animator = GetComponent<Animator>();
         rb = GetComponent<Rigidbody2D>();
         enemyCollider = GetComponent<Collider2D>();
-        currentPatrolPoint = patrolPoint1;
         rb.isKinematic = true;
+    }
+
+    void InitializePatrol()
+    {
+        currentPatrolPoint = patrolPoint1;
     }
 
     void Update()
@@ -90,8 +105,8 @@ public class EnemyBehavior : MonoBehaviour
 
         if (Vector2.Distance(transform.position, currentPatrolPoint.position) < 0.2f)
         {
-            currentPatrolPoint = currentPatrolPoint == patrolPoint1 ? patrolPoint2 : patrolPoint1;
-            transform.localScale = new Vector2(-transform.localScale.x, transform.localScale.y);
+            currentPatrolPoint = (currentPatrolPoint == patrolPoint1) ? patrolPoint2 : patrolPoint1;
+            Flip();
         }
     }
 
@@ -99,8 +114,12 @@ public class EnemyBehavior : MonoBehaviour
     {
         animator.SetBool("walk", true);
         rb.MovePosition(Vector2.MoveTowards(transform.position, player1.position, speed * Time.deltaTime));
+        FlipTowardsPlayer(player1.position);
+    }
 
-        if (transform.position.x < player1.position.x)
+    void FlipTowardsPlayer(Vector3 playerPosition)
+    {
+        if (transform.position.x < playerPosition.x)
         {
             transform.localScale = new Vector2(Mathf.Abs(transform.localScale.x), transform.localScale.y);
         }
@@ -164,5 +183,12 @@ public class EnemyBehavior : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, detectionRange);
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+    }
+
+    private void Flip()
+    {
+        Vector3 newScale = transform.localScale;
+        newScale.x *= -1;
+        transform.localScale = newScale;
     }
 }

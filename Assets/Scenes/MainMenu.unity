@@ -477,8 +477,8 @@ GameObject:
   - component: {fileID: 958986097}
   - component: {fileID: 958986096}
   - component: {fileID: 958986095}
-  - component: {fileID: 958986098}
   - component: {fileID: 958986099}
+  - component: {fileID: 958986098}
   m_Layer: 5
   m_Name: PlayButton
   m_TagString: Untagged
@@ -623,8 +623,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: b49a976fdffb6f946b1db59e39c943b0, type: 3}
-  m_PlayOnAwake: 0
+  m_audioClip: {fileID: 0}
+  m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
   Loop: 0

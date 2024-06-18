@@ -10,10 +10,14 @@ public class GameOverManager : MonoBehaviour
     public Button restartButton;
     public Button quitButton;
 
-    void Start()
+    private void Start()
     {
-        gameOverUI.SetActive(false);
+        InitializeButtons();
+        HideGameOver();
+    }
 
+    private void InitializeButtons()
+    {
         if (restartButton != null)
         {
             restartButton.onClick.AddListener(RestartGame);
@@ -31,15 +35,19 @@ public class GameOverManager : MonoBehaviour
         Time.timeScale = 0f;
     }
 
-    void RestartGame()
+    public void HideGameOver()
     {
+        gameOverUI.SetActive(false);
         Time.timeScale = 1f;
+    }
+
+    private void RestartGame()
+    {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
-    void QuitGame()
+    private void QuitGame()
     {
-        Time.timeScale = 1f;
         SceneManager.LoadScene("MainMenu");
     }
 }

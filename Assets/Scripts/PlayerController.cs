@@ -1,4 +1,4 @@
- using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,65 +11,75 @@ public class PlayerController : MonoBehaviour
     public delegate void OnHealthChanged(float currentHealth, float maxHealth);
     public event OnHealthChanged HealthChanged;
 
-    //Movement
-    [Header("Movement")]
-    private Rigidbody2D rb2D;
-
-    private float movement = 0f;
-
+    [Header("Movement Settings")]
     [SerializeField] private float movementSpeed;
-    [Range(0, 0.3f)] [SerializeField] private float movementSmoothing;
+    [Range(0, 0.3f)][SerializeField] private float movementSmoothing;
+    private Rigidbody2D rb2D;
+    private float movement = 0f;
+    private Vector3 velocity = Vector3.zero;
+    private bool facingRight = true;
 
-    private Vector3 speed = Vector3.zero;
-    private bool rightDirection = true;
-
-    //Jump
-    [Header("Jump")]
+    [Header("Jump Settings")]
     [SerializeField] private float jumpForce;
-    [SerializeField] private LayerMask isFloor;
-    [SerializeField] private Transform floorController;
-    [SerializeField] private Vector3 boxDimensions;
-    [SerializeField] private bool onTheFloor;
-
+    [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private Transform groundCheck;
+    [SerializeField] private Vector3 groundCheckSize;
+    private bool isGrounded;
     private bool jump = false;
 
-    //Animator
-    [Header("Animator")]
-    private Animator animator;
-
-    public LayerMask enemyLayer;
-    [SerializeField]public float attackRange;
-    [SerializeField] private Transform hitController;
+    [Header("Combat Settings")]
+    [SerializeField] private LayerMask enemyLayer;
+    [SerializeField] private float attackRange;
+    [SerializeField] private Transform attackPoint;
     public int maxHealth = 100;
-
     private int currentHealth;
 
+    [Header("Game Over Settings")]
+    [SerializeField] private float fallThreshold = -10f;
     public GameOverManager gameOverManager;
     public float gameOverDelay = 0.25f;
     public AudioClip deathSound;
     private AudioSource audioSource;
 
-    //Start
+    private Animator animator;
+
     private void Start()
     {
+        InitializeComponents();
         currentHealth = maxHealth;
+        HealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
+    private void InitializeComponents()
+    {
         rb2D = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
-        HealthChanged?.Invoke(currentHealth, maxHealth);
         audioSource = GetComponent<AudioSource>();
     }
 
     private void Update()
     {
+        HandleMovementInput();
+        HandleJumpInput();
+        HandleAttackInput();
+    }
+
+    private void HandleMovementInput()
+    {
         movement = Input.GetAxisRaw("Horizontal") * movementSpeed;
-
         animator.SetFloat("movement", Math.Abs(movement));
+    }
 
-        if(Input.GetButtonDown("Jump"))
+    private void HandleJumpInput()
+    {
+        if (Input.GetButtonDown("Jump"))
         {
             jump = true;
         }
+    }
 
+    private void HandleAttackInput()
+    {
         if (Input.GetButtonDown("Fire1"))
         {
             Attack();
@@ -78,23 +88,65 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        onTheFloor = Physics2D.OverlapBox(floorController.position, boxDimensions, 0f, isFloor);
-        animator.SetBool("on the floor", onTheFloor);
+        CheckGroundStatus();
         Move(movement * Time.fixedDeltaTime, jump);
-
         jump = false;
+        CheckFallStatus();
+    }
+
+    private void CheckGroundStatus()
+    {
+        isGrounded = Physics2D.OverlapBox(groundCheck.position, groundCheckSize, 0f, groundLayer);
+        animator.SetBool("isGrounded", isGrounded);
+    }
+
+    private void CheckFallStatus()
+    {
+        if (transform.position.y < fallThreshold)
+        {
+            Die();
+        }
+    }
+
+    private void Move(float move, bool jump)
+    {
+        Vector3 targetVelocity = new Vector2(move, rb2D.velocity.y);
+        rb2D.velocity = Vector3.SmoothDamp(rb2D.velocity, targetVelocity, ref velocity, movementSmoothing);
+
+        if (move > 0 && !facingRight)
+        {
+            Flip();
+        }
+        else if (move < 0 && facingRight)
+        {
+            Flip();
+        }
+
+        if (isGrounded && jump)
+        {
+            isGrounded = false;
+            rb2D.AddForce(new Vector2(0f, jumpForce));
+        }
+    }
+
+    private void Flip()
+    {
+        facingRight = !facingRight;
+        Vector3 theScale = transform.localScale;
+        theScale.x *= -1;
+        transform.localScale = theScale;
     }
 
     private void Attack()
     {
         animator.SetTrigger("Attack");
-        Collider2D[] enemies = Physics2D.OverlapCircleAll(transform.position, attackRange, enemyLayer);
+        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, enemyLayer);
 
-        foreach (Collider2D enemy in enemies)
+        foreach (Collider2D enemy in hitEnemies)
         {
             if (enemy.CompareTag("Enemy"))
             {
-                enemy.transform.GetComponent<EnemyBehavior>().TakeDamage(20);
+                enemy.GetComponent<EnemyBehavior>().TakeDamage(20);
             }
         }
     }
@@ -102,8 +154,9 @@ public class PlayerController : MonoBehaviour
     public void TakeDamage(int damage)
     {
         currentHealth -= damage;
-        if (currentHealth < 0) currentHealth = 0;
+        currentHealth = Mathf.Max(currentHealth, 0);
         HealthChanged?.Invoke(currentHealth, maxHealth);
+
         if (currentHealth <= 0)
         {
             Die();
@@ -123,7 +176,6 @@ public class PlayerController : MonoBehaviour
         }
 
         animator.SetTrigger("Death");
-
         yield return new WaitForSeconds(gameOverDelay);
 
         if (gameOverManager != null)
@@ -134,41 +186,12 @@ public class PlayerController : MonoBehaviour
         Destroy(gameObject);
     }
 
-    private void Move(float move, bool jump)
-    {
-        Vector3 targetSpeed = new Vector2(move, rb2D.velocity.y);
-        rb2D.velocity = Vector3.SmoothDamp(rb2D.velocity, targetSpeed, ref speed, movementSmoothing);
-
-        if (move>0 && !rightDirection)
-        {
-            TurnLeftOrRight();
-        }
-        else if (move<0 && rightDirection)
-        {
-            TurnLeftOrRight();
-        }
-
-        if (onTheFloor && jump)
-        {
-            onTheFloor = false;
-            rb2D.AddForce(new Vector2(0f, jumpForce));
-        }
-    }
-
-    private void TurnLeftOrRight()
-    {
-        rightDirection = !rightDirection;
-        Vector3 scale = transform.localScale;
-        scale.x *= -1;
-        transform.localScale = scale;
-    }
-
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireCube(floorController.position, boxDimensions);
+        Gizmos.DrawWireCube(groundCheck.position, groundCheckSize);
 
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(hitController.position, attackRange);
+        Gizmos.DrawWireSphere(attackPoint.position, attackRange);
     }
 }
